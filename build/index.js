@@ -89340,13 +89340,29 @@ var server = new McpServer(
   // logging capability lets the IMAP IDLE watcher push new-mail notifications (B5).
   { capabilities: { logging: {} } }
 );
+var SEND_ENABLED = /^(1|true|yes|on)$/i.test(process.env.APPLE_MAIL_MCP_ALLOW_SEND?.trim() ?? "");
+var SEND_ONLY_TOOLS = /* @__PURE__ */ new Set(["send-email", "send-serial-email"]);
+var DRAFT_ONLY_TOOLS = /* @__PURE__ */ new Set(["reply-to-message", "forward-message"]);
 function registerTool(name2, config2, cb) {
   const { outputSchema, ...rest } = config2;
-  return server.registerTool(
+  let callback = cb;
+  if (!SEND_ENABLED && DRAFT_ONLY_TOOLS.has(name2)) {
+    callback = ((args, extra) => cb(
+      { ...args, send: false },
+      extra
+    ));
+    rest.description = `${rest.description ?? ""}
+NOTE: sending is switched OFF on this server (APPLE_MAIL_MCP_ALLOW_SEND) \u2014 this tool always saves a draft for the user to review and send in Mail.app.`;
+  }
+  const tool = server.registerTool(
     name2,
     outputSchema ? { ...rest, outputSchema: external_exports.object(outputSchema).passthrough() } : rest,
-    cb
+    callback
   );
+  if (!SEND_ENABLED && SEND_ONLY_TOOLS.has(name2)) {
+    tool.disable();
+  }
+  return tool;
 }
 var mailManager = new AppleMailManager();
 registerResourcesAndPrompts(server, mailManager);

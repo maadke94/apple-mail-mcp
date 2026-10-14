@@ -128,6 +128,18 @@ npm install -g apple-mail-mcp
 
 On first use, macOS will ask for permission to automate Mail.app. Click "OK" to allow.
 
+## Send switch (draft-only by default)
+
+Sending is **off** unless you turn it on. With it off, the server can read, search,
+organize and **draft** — but nothing leaves your Mac until you press Send in Mail.app:
+
+- `send-email` and `send-serial-email` are not advertised at all
+- `reply-to-message` and `forward-message` always save a draft, whatever `send` is set to
+
+Turn sending on by setting `APPLE_MAIL_MCP_ALLOW_SEND=1` (in the server's `env` block, or in
+`~/Library/Application Support/apple-mail-mcp/config.json` for hosts that strip `env`),
+then restart the server. Set it back to `0` (or remove it) to return to draft-only.
+
 ## Configuring email (IMAP & SMTP)
 
 The server works out of the box over AppleScript with **no configuration**. Two
@@ -663,6 +675,7 @@ for an explicitly-named IMAP account, never on an omitted account.
 | `APPLE_MAIL_MCP_IMAP_KEYCHAIN_SERVICE` | No       | —                | Keychain item service/server name                                                                                                                                                                                                                                                   |
 | `APPLE_MAIL_MCP_IMAP_KEYCHAIN_ACCOUNT` | No       | = user           | Keychain item account                                                                                                                                                                                                                                                               |
 | `APPLE_MAIL_MCP_IMAP_ACCOUNTS`         | No       | —                | JSON array of **additional** IMAP accounts for multi-account setups (see below)                                                                                                                                                                                                     |
+| `APPLE_MAIL_MCP_ALLOW_SEND`            | No       | `0`              | **Send switch.** Off by default: `send-email` and `send-serial-email` are hidden and `reply-to-message` / `forward-message` always save a draft. Set `1` to allow sending.                                                                                                     |
 | `APPLE_MAIL_MCP_IMAP_IDLE`             | No       | `0`              | Set `1` to enable IMAP IDLE push notifications (new-mail alerts) for every configured account                                                                                                                                                                                       |
 | `APPLE_MAIL_MCP_IMAP_IDLE_MS`          | No       | `30000`          | Idle timeout (ms) before a pooled IMAP connection is closed (`0` = never close)                                                                                                                                                                                                     |
 | `APPLE_MAIL_MCP_STATS_BUDGET_MS`       | No       | `25000`          | Per-account wall-clock budget for `get-mail-stats` (minimum `1000`). Raise it for very large accounts                                                                                                                                                                               |

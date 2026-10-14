@@ -305,7 +305,7 @@ describe("Guard B: README Tool Reference == the tool surface the server advertis
     const transport = new StdioClientTransport({
       command: process.execPath,
       args: [SERVER],
-      env: { ...process.env } as Record<string, string>,
+      env: { ...process.env, APPLE_MAIL_MCP_ALLOW_SEND: "1" } as Record<string, string>,
     });
     client = new Client({ name: "docs-truth-test", version: "0.0.0" });
     await client.connect(transport);

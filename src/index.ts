@@ -475,6 +475,16 @@ const server = new McpServer(
  * an undeclared one is carried through instead of nuking the whole result.
  * Enforced for every tool by `test/output-schema.test.ts`.
  */
+/**
+ * Send switch. Sending is OFF unless APPLE_MAIL_MCP_ALLOW_SEND is 1/true/yes/on.
+ * Off: send-email and send-serial-email are hidden, and reply-to-message /
+ * forward-message always save a draft. Drafting, reading and organizing are
+ * unaffected. Set it in the server's env block or in config.json.
+ */
+const SEND_ENABLED = /^(1|true|yes|on)$/i.test(process.env.APPLE_MAIL_MCP_ALLOW_SEND?.trim() ?? "");
+const SEND_ONLY_TOOLS = new Set(["send-email", "send-serial-email"]);
+const DRAFT_ONLY_TOOLS = new Set(["reply-to-message", "forward-message"]);
+
 function registerTool<
   OutputArgs extends z.ZodRawShape,
   InputArgs extends undefined | z.ZodRawShape = undefined,
@@ -490,11 +500,26 @@ function registerTool<
   cb: ToolCallback<InputArgs>
 ): RegisteredTool {
   const { outputSchema, ...rest } = config;
-  return server.registerTool(
+  let callback = cb;
+  if (!SEND_ENABLED && DRAFT_ONLY_TOOLS.has(name)) {
+    // Send switch is off: reply/forward always save a draft, whatever `send` says.
+    callback = ((args: Record<string, unknown>, extra: unknown) =>
+      (cb as (a: Record<string, unknown>, e: unknown) => unknown)(
+        { ...args, send: false },
+        extra
+      )) as unknown as ToolCallback<InputArgs>;
+    rest.description = `${rest.description ?? ""}\nNOTE: sending is switched OFF on this server (APPLE_MAIL_MCP_ALLOW_SEND) — this tool always saves a draft for the user to review and send in Mail.app.`;
+  }
+  const tool = server.registerTool(
     name,
     outputSchema ? { ...rest, outputSchema: z.object(outputSchema).passthrough() } : rest,
-    cb
+    callback
   );
+  if (!SEND_ENABLED && SEND_ONLY_TOOLS.has(name)) {
+    // Send switch is off: hide tools whose only job is to send.
+    tool.disable();
+  }
+  return tool;
 }
 
 /**
